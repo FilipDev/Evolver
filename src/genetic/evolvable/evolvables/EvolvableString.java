@@ -1,8 +1,11 @@
-package genetic;
+package genetic.evolvable.evolvables;
+
+import genetic.evolvable.Evolvable;
+import genetic.evolvable.TargetedEvolvable;
 
 import java.util.Random;
 
-public class EvolvableString extends Evolvable<String> {
+public class EvolvableString extends TargetedEvolvable<String> {
 
     public EvolvableString(String target, String string) {
         super(target, string);
@@ -74,14 +77,14 @@ public class EvolvableString extends Evolvable<String> {
         char[] newChars = new char[getCurrent().length()];
 
         for (int i = 0; i < newChars.length; i++) {
-            newChars[i] = Math.random() < fitnessDifference + 0.5 ? other.getCurrent().charAt(i) : getCurrent().charAt(i);
+            newChars[i] = Math.random() < fitnessDifference * 6 + 0.5 ? other.getCurrent().charAt(i) : getCurrent().charAt(i);
         }
 
         return new EvolvableString(getTarget(), String.valueOf(newChars));
     }
 
     @Override
-    public int getMicrostates() {
-        return possibleChars.length;
+    public int getPossibleStates() {
+        return possibleChars.length * getTarget().length();
     }
 }

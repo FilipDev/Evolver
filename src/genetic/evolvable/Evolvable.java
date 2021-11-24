@@ -1,18 +1,15 @@
-package genetic;
+package genetic.evolvable;
 
 public abstract class Evolvable<T> implements Comparable {
 
-    private T target;
     private T current;
 
-    public Evolvable(T target, T current) {
+    public Evolvable(T current) {
         this.current = current;
-        this.target = target;
     }
 
-    public Evolvable(T target, double... parameters) {
+    public Evolvable(double... parameters) {
         this.current = generate(parameters);
-        this.target = target;
     }
 
     public T getCurrent() {
@@ -36,10 +33,6 @@ public abstract class Evolvable<T> implements Comparable {
         return getCurrent().toString();
     }
 
-    public T getTarget() {
-        return target;
-    }
-
     @Override
     public int compareTo(Object o) {
         if (getClass().isInstance(o)) {
@@ -48,5 +41,5 @@ public abstract class Evolvable<T> implements Comparable {
         return 0;
     }
 
-    public abstract int getMicrostates();
+    public abstract int getPossibleStates();
 }

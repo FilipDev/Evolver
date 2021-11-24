@@ -1,35 +1,52 @@
 package genetic;
 
+import genetic.arbiters.Arbiter;
+import genetic.evolvable.Evolvable;
+import genetic.evolvable.evolvables.EvolvableImage;
+import genetic.evolvable.evolvables.EvolvableString;
+
 import java.util.*;
 
 public class Population<T> {
 
     private Map<Evolvable<T>, Double> fitnesses = new HashMap<>();
     private Set<Evolvable<T>> population = new HashSet<>();
-    private T target;
-    private int maxPopulation, epoch, found, microstates = -1;
+    private int maxPopulation, epoch, found, possibleStates = 0;
 
-    public Population(String target, int population) {
-        this.target = (T) target;
+    public Population(int population) {
         this.maxPopulation = population;
-        for (int i = 0; i < population; i++) {
+    }
+
+    public void generateStrings(String target) {
+        for (int i = 0; i < maxPopulation; i++) {
             EvolvableString evolvableString = new EvolvableString(target);
-            if (microstates == -1) microstates = evolvableString.getMicrostates();
+            if (possibleStates == 0) possibleStates = evolvableString.getPossibleStates();
             this.population.add((Evolvable<T>) evolvableString);
             fitnesses.put((Evolvable<T>) evolvableString, evolvableString.getScore());
         }
     }
 
-    public boolean update() {
-        mutate(0.008);
-        select(0.12);
-        reproduce(0);
+    public void generateImages(Arbiter<EvolvableImage> arbiter, int sizeX, int sizeY, int scalings) {
+        for (int i = 0; i < maxPopulation; i++) {
+            EvolvableImage evolvableImage = new EvolvableImage(arbiter, sizeX, sizeY, scalings);
+            evolvableImage.fill(0.5D);
+            if (possibleStates == 0) possibleStates = evolvableImage.getPossibleStates();
+            this.population.add((Evolvable<T>) evolvableImage);
+            fitnesses.put((Evolvable<T>) evolvableImage, evolvableImage.getScore());
+        }
+    }
+
+    public boolean update(double mutationRate, double selectionDifference, double reproductionBaseRate) {
+        mutate(mutationRate);
+        select(selectionDifference);
+        reproduce(reproductionBaseRate);
+
         updatePopulation();
         updateFitnesses();
+
         epoch++;
 
         if (epoch > 500) {
-            System.out.println(getBest());
         }
 
         return found > 0;
@@ -38,38 +55,35 @@ public class Population<T> {
     public void mutate(double rate) {
         for (Evolvable<T> evolvable : population) {
             evolvable.mutate(rate);
-            fitnesses.put(evolvable, evolvable.getScore());
+            double score = evolvable.getScore();
+            fitnesses.put(evolvable, score);
         }
     }
 
-    public void select(double difference) {
+    public void select(double stds) {
         double avg = getAverage();
+        double standardDeviation = getStandardDeviation();
 
         found = 0;
 
         for (Map.Entry<Evolvable<T>, Double> entry : fitnesses.entrySet()) {
             if (entry.getValue() == 1.0) {
                 found++;
-            } else if (entry.getValue() + (Math.random() / 20) - 0.01 < Math.min(1, avg + difference)) {
-                if (population.size() > entry.getKey().getMicrostates() * 2) {
-                    //if (Math.random() / 1.2 > entry.getValue())
+            } else if (entry.getValue() / avg < 1 + standardDeviation * stds) {//1 + difference) {//(entry.getValue() < Math.min(1, avg + difference)) {
+                if ((double) population.size() > maxPopulation / 4.0) {
                     population.remove(entry.getKey());
                 }
             }
         }
-        if (found > 0) {
-            //System.out.println("Found " + found + " at " + epoch);
-        }
     }
 
     public void reproduce(double baseChance) {
-        while (newPopulation.size() < 200) {
+        while (newPopulation.size() < maxPopulation) {
             for (Evolvable<T> evolvable1 : population) {
                 for (Evolvable<T> evolvable2 : population) {
                     if (Math.random() < baseChance + fitnesses.get(evolvable1) * fitnesses.get(evolvable2)) {
                         Evolvable<T> mix = mix(evolvable1, evolvable2);
                         newPopulation.add(mix);
-                        fitnesses.put(mix, mix.getScore());
                     }
                 }
             }
@@ -117,6 +131,17 @@ public class Population<T> {
         return total / (double) i;
     }
 
+    public double getStandardDeviation() {
+        double average = getAverage();
+        double dev = 0.0;
+
+        for (Map.Entry<Evolvable<T>, Double> entry : fitnesses.entrySet()) {
+            dev += Math.pow(entry.getValue() - average, 2);
+        }
+
+        return Math.sqrt(dev / fitnesses.size());
+    }
+
     public Evolvable<T> getBest() {
         Evolvable<T> best = null;
         for (Evolvable<T> evolvable : getPopulation()) {
@@ -128,7 +153,7 @@ public class Population<T> {
         return best;
     }
 
-    public T getTarget() {
-        return target;
+    public int getPossibleStates() {
+        return possibleStates;
     }
 }
